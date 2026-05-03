@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { QuoteRequest } from '@/types/quote';
+import { QuoteInput } from '@/types/quote';
+import { calculateQuote } from '@/lib/pricing';
+
+interface LocalQuoteRequest {
+  clientName: string;
+  refs: string[];
+  input: QuoteInput;
+}
 
 function formatWon(n: number) {
   return n.toLocaleString('ko-KR') + '원';
@@ -16,27 +23,36 @@ function escapeHtml(text: string): string {
 }
 
 export async function POST(req: NextRequest) {
-  let body: QuoteRequest;
+  let body: LocalQuoteRequest;
   try {
     body = await req.json();
   } catch {
     return NextResponse.json({ error: '잘못된 요청 형식입니다' }, { status: 400 });
   }
 
-  const { clientName, refs, input, result } = body;
+  const { clientName, refs, input } = body;
   if (!clientName?.trim()) {
     return NextResponse.json({ error: '고객명이 누락되었습니다' }, { status: 400 });
   }
 
-  const refsHtml =
-    refs.length > 0
-      ? `<ul style="padding-left:16px">${refs
-        .filter((r) => {
-          try { const u = new URL(r); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; }
-        })
-        .map((r) => `<li><a href="${escapeHtml(r)}">${escapeHtml(r)}</a></li>`)
-        .join('')}</ul>`
-      : '<p style="color:#999">없음</p>';
+  const { shootingCount, editMinutes, extraCrew, drone } = input ?? {};
+  if (
+    !Number.isFinite(shootingCount) || shootingCount < 0 ||
+    !Number.isFinite(editMinutes) || editMinutes < 0 ||
+    !Number.isFinite(extraCrew) || extraCrew < 0 ||
+    typeof drone !== 'boolean'
+  ) {
+    return NextResponse.json({ error: '입력값이 올바르지 않습니다' }, { status: 400 });
+  }
+
+  const result = calculateQuote(input);
+
+  const validRefs = (refs ?? []).slice(0, 20).filter((r) => {
+    try { const u = new URL(r); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; }
+  });
+  const refsHtml = validRefs.length > 0
+    ? `<ul style="padding-left:16px">${validRefs.map((r) => `<li><a href="${escapeHtml(r)}">${escapeHtml(r)}</a></li>`).join('')}</ul>`
+    : '<p style="color:#999">없음</p>';
 
   const rows = [
     `<tr><td style="padding:4px 8px;color:#666">촬영 (${input.shootingCount}회)</td><td style="padding:4px 8px;text-align:right">${formatWon(result.shootingFee)}</td></tr>`,
@@ -57,11 +73,17 @@ export async function POST(req: NextRequest) {
     </div>
   `;
 
+  const { RESEND_API_KEY, SENDER_EMAIL, MANAGER_EMAIL } = process.env;
+  if (!RESEND_API_KEY || !SENDER_EMAIL || !MANAGER_EMAIL) {
+    console.error('[quote API] 환경변수 누락');
+    return NextResponse.json({ error: '서버 설정 오류입니다' }, { status: 500 });
+  }
+
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY);
+    const resend = new Resend(RESEND_API_KEY);
     await resend.emails.send({
-      from: process.env.SENDER_EMAIL!,
-      to: process.env.MANAGER_EMAIL!,
+      from: SENDER_EMAIL,
+      to: MANAGER_EMAIL,
       subject: `[견적 요청] ${clientName}`,
       html,
     });

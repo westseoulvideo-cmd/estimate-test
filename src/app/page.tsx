@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { calculateQuote, PRICES } from '@/lib/pricing';
-import { QuoteInput, QuoteRequest } from '@/types/quote';
+import { QuoteInput } from '@/types/quote';
 
 function formatWon(n: number) {
   return n.toLocaleString('ko-KR') + '원';
@@ -55,11 +55,10 @@ export default function Home() {
     setSending(true);
     setError('');
     setSent(false);
-    const payload: QuoteRequest = {
+    const payload = {
       clientName,
       refs: refs.map((r) => r.value).filter(Boolean),
       input,
-      result,
     };
     try {
       const res = await fetch('/api/quote', {
@@ -129,17 +128,17 @@ export default function Home() {
           </Field>
 
           <Field label="촬영 횟수" required>
-            <NumberInput value={shootingCount} onChange={setShootingCount} min={0} suffix="회" />
+            <NumberInput value={shootingCount} onChange={(v) => { setShootingCount(v); setSent(false); }} min={0} suffix="회" />
           </Field>
 
           <Field label="결과물 길이" required>
-            <NumberInput value={editMinutes} onChange={setEditMinutes} min={0} suffix="분" />
+            <NumberInput value={editMinutes} onChange={(v) => { setEditMinutes(v); setSent(false); }} min={0} suffix="분" />
           </Field>
 
           <Field label="드론 촬영">
             <button
               type="button"
-              onClick={() => setDrone(!drone)}
+              onClick={() => { setDrone(!drone); setSent(false); }}
               className={`w-full py-3 border text-sm tracking-wide transition-colors ${
                 drone
                   ? 'border-black bg-black text-white'
@@ -154,7 +153,7 @@ export default function Home() {
           </Field>
 
           <Field label="추가 촬영 인원">
-            <NumberInput value={extraCrew} onChange={setExtraCrew} min={0} suffix="명" />
+            <NumberInput value={extraCrew} onChange={(v) => { setExtraCrew(v); setSent(false); }} min={0} suffix="명" />
           </Field>
         </section>
 
