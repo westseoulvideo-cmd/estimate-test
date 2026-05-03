@@ -6,6 +6,15 @@ function formatWon(n: number) {
   return n.toLocaleString('ko-KR') + '원';
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 export async function POST(req: NextRequest) {
   let body: QuoteRequest;
   try {
@@ -21,7 +30,12 @@ export async function POST(req: NextRequest) {
 
   const refsHtml =
     refs.length > 0
-      ? `<ul style="padding-left:16px">${refs.map((r) => `<li><a href="${r}">${r}</a></li>`).join('')}</ul>`
+      ? `<ul style="padding-left:16px">${refs
+        .filter((r) => {
+          try { const u = new URL(r); return u.protocol === 'http:' || u.protocol === 'https:'; } catch { return false; }
+        })
+        .map((r) => `<li><a href="${escapeHtml(r)}">${escapeHtml(r)}</a></li>`)
+        .join('')}</ul>`
       : '<p style="color:#999">없음</p>';
 
   const rows = [
@@ -35,7 +49,7 @@ export async function POST(req: NextRequest) {
   const html = `
     <div style="font-family:sans-serif;max-width:600px;margin:0 auto">
       <h2 style="font-size:18px;font-weight:500;border-bottom:1px solid #eee;padding-bottom:8px">견적 요청</h2>
-      <p><strong>고객명:</strong> ${clientName}</p>
+      <p><strong>고객명:</strong> ${escapeHtml(clientName)}</p>
       <h3 style="font-size:14px;color:#666;margin-top:24px">견적 내용</h3>
       <table style="width:100%;border-collapse:collapse">${rows}</table>
       <h3 style="font-size:14px;color:#666;margin-top:24px">레퍼런스</h3>
