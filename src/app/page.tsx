@@ -10,7 +10,8 @@ function formatWon(n: number) {
 
 export default function Home() {
   const [clientName, setClientName] = useState('');
-  const [refs, setRefs] = useState<string[]>(['']);
+  const [refs, setRefs] = useState<{ id: number; value: string }[]>([{ id: 0, value: '' }]);
+  const nextRefId = useRef(1);
   const [shootingCount, setShootingCount] = useState(1);
   const [editMinutes, setEditMinutes] = useState(0);
   const [drone, setDrone] = useState(false);
@@ -23,22 +24,27 @@ export default function Home() {
   const input: QuoteInput = { shootingCount, editMinutes, drone, extraCrew };
   const result = calculateQuote(input);
 
-  const addRef = () => setRefs([...refs, '']);
+  const addRef = () => {
+    setRefs([...refs, { id: nextRefId.current++, value: '' }]);
+  };
   const updateRef = (i: number, v: string) => {
-    const next = [...refs];
-    next[i] = v;
+    const next = refs.map((r, idx) => (idx === i ? { ...r, value: v } : r));
     setRefs(next);
   };
   const removeRef = (i: number) => setRefs(refs.filter((_, idx) => idx !== i));
 
   const handleSave = async () => {
     if (!quoteRef.current) return;
-    const { toPng } = await import('html-to-image');
-    const dataUrl = await toPng(quoteRef.current, { pixelRatio: 2, backgroundColor: '#ffffff' });
-    const link = document.createElement('a');
-    link.download = `견적서_${clientName || '고객'}.png`;
-    link.href = dataUrl;
-    link.click();
+    try {
+      const { toPng } = await import('html-to-image');
+      const dataUrl = await toPng(quoteRef.current, { pixelRatio: 2, backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = `견적서_${clientName || '고객'}.png`;
+      link.href = dataUrl;
+      link.click();
+    } catch {
+      setError('이미지 저장 중 오류가 발생했습니다');
+    }
   };
 
   const handleSubmit = async () => {
@@ -51,7 +57,7 @@ export default function Home() {
     setSent(false);
     const payload: QuoteRequest = {
       clientName,
-      refs: refs.filter(Boolean),
+      refs: refs.map((r) => r.value).filter(Boolean),
       input,
       result,
     };
@@ -86,7 +92,7 @@ export default function Home() {
             <input
               className={inputClass}
               value={clientName}
-              onChange={(e) => setClientName(e.target.value)}
+              onChange={(e) => { setClientName(e.target.value); setSent(false); setError(''); }}
               placeholder="홍길동"
             />
           </Field>
@@ -94,16 +100,17 @@ export default function Home() {
           <Field label="레퍼런스 링크">
             <div className="space-y-2">
               {refs.map((r, i) => (
-                <div key={i} className="flex gap-2">
+                <div key={r.id} className="flex gap-2">
                   <input
                     className={`${inputClass} flex-1`}
-                    value={r}
+                    value={r.value}
                     onChange={(e) => updateRef(i, e.target.value)}
                     placeholder="https://youtube.com/..."
                     type="url"
                   />
                   {refs.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => removeRef(i)}
                       className="text-gray-400 hover:text-black text-sm px-2 transition-colors"
                     >
@@ -173,20 +180,20 @@ export default function Home() {
               <span>{formatWon(result.total)}</span>
             </div>
 
-            {refs.filter(Boolean).length > 0 && (
+            {refs.some((r) => r.value) && (
               <div className="mt-5 pt-4 border-t border-gray-100">
                 <p className="text-xs tracking-widest text-gray-400 uppercase mb-2">레퍼런스</p>
                 <ul className="space-y-1">
-                  {refs.filter(Boolean).map((r, i) => (
-                    <li key={i} className="text-xs text-gray-500 break-all flex gap-1.5">
+                  {refs.filter((r) => r.value).map((r) => (
+                    <li key={r.id} className="text-xs text-gray-500 break-all flex gap-1.5">
                       <span className="text-gray-300">·</span>
                       <a
-                        href={r}
+                        href={r.value}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="hover:text-black transition-colors"
                       >
-                        {r}
+                        {r.value}
                       </a>
                     </li>
                   ))}
@@ -251,6 +258,7 @@ function NumberInput({
   return (
     <div className="flex items-center gap-2">
       <button
+        type="button"
         onClick={() => onChange(Math.max(min, value - 1))}
         className="w-8 h-8 border border-gray-300 text-sm hover:border-black transition-colors"
       >
@@ -258,6 +266,7 @@ function NumberInput({
       </button>
       <span className="text-sm w-8 text-center tabular-nums">{value}</span>
       <button
+        type="button"
         onClick={() => onChange(value + 1)}
         className="w-8 h-8 border border-gray-300 text-sm hover:border-black transition-colors"
       >
