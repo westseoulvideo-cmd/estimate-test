@@ -23,7 +23,13 @@
       "Bash(echo \"exit: $?\")",
       "Bash(npx jest *)",
       "Bash(npm install *)",
-      "PowerShell(Test-Path \"C:\\\\estimate system\\\\public\\\\logo-white.png\" | ForEach-Object { if \\($_\\) { Write-Output \"File exists: C:\\\\estimate system\\\\public\\\\logo-white.png\" } else { Write-Output \"File not found\" } })"
+      "PowerShell(Test-Path \"C:\\\\estimate system\\\\public\\\\logo-white.png\" | ForEach-Object { if \\($_\\) { Write-Output \"File exists: C:\\\\estimate system\\\\public\\\\logo-white.png\" } else { Write-Output \"File not found\" } })",
+      "PowerShell(ssh-keyscan *)",
+      "PowerShell(Get-Content *)",
+      "Bash(Select-String \"프로파간다\")",
+      "Bash(Select-Object Name, Length, LastWriteTime)",
+      "PowerShell(Get-ChildItem \"C:\\\\estimate system\" | ForEach-Object { \"$\\($_.Name\\) | $\\($_.Length\\)\" })",
+      "PowerShell(Copy-Item *)"
     ]
   }
 }
