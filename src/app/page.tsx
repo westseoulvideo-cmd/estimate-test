@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { calculateQuote, SHOOTING_LABELS, TRAVEL_LABELS, INTRO_OUTRO_LABELS, COMPANY } from '@/lib/pricing';
 import {
   ClientInfo, QuoteInput, QuoteResult,
@@ -17,11 +17,10 @@ function formatQuoteDate(d: string) {
   return `${y}년 ${m}월 ${day}일`;
 }
 
-const defaultClient: ClientInfo = {
+const defaultClient: Omit<ClientInfo, 'refs'> = {
   name: '', position: '', department: '', contact: '',
   company: '', projectName: '', projectDate: '', projectLocation: '',
   requirements: '', quoteDate: new Date().toISOString().split('T')[0],
-  refs: [''],
 };
 
 const defaultInput: QuoteInput = {
@@ -34,14 +33,16 @@ const defaultInput: QuoteInput = {
 
 export default function Home() {
   const [step, setStep] = useState<1 | 2>(1);
-  const [clientInfo, setClientInfo] = useState<ClientInfo>(defaultClient);
+  const [clientInfo, setClientInfo] = useState<Omit<ClientInfo, 'refs'>>(defaultClient);
+  const [refs, setRefs] = useState<{ id: number; value: string }[]>([{ id: 0, value: '' }]);
+  const nextRefId = useRef(1);
   const [input, setInput] = useState<QuoteInput>(defaultInput);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState('');
   const quoteRef = useRef<HTMLDivElement>(null);
 
-  const result = calculateQuote(input);
+  const result = useMemo(() => calculateQuote(input), [input]);
   const step1Valid = !!(clientInfo.name.trim() && clientInfo.contact.trim() && clientInfo.quoteDate);
 
   const setClient = (field: keyof Omit<ClientInfo, 'refs'>, value: string) => {
@@ -50,14 +51,14 @@ export default function Home() {
   };
 
   const setRef = (i: number, v: string) => {
-    setClientInfo(prev => {
-      const refs = [...prev.refs];
-      refs[i] = v;
-      return { ...prev, refs };
-    });
+    setRefs(prev => prev.map((r, idx) => idx === i ? { ...r, value: v } : r));
   };
-  const addRef = () => setClientInfo(prev => ({ ...prev, refs: [...prev.refs, ''] }));
-  const removeRef = (i: number) => setClientInfo(prev => ({ ...prev, refs: prev.refs.filter((_, idx) => idx !== i) }));
+  const addRef = () => {
+    setRefs(prev => [...prev, { id: nextRefId.current++, value: '' }]);
+  };
+  const removeRef = (i: number) => {
+    setRefs(prev => prev.filter((_, idx) => idx !== i));
+  };
 
   const setQ = (updates: Partial<QuoteInput>) => {
     setInput(prev => ({ ...prev, ...updates }));
@@ -87,7 +88,7 @@ export default function Home() {
       const res = await fetch('/api/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ clientInfo, input }),
+        body: JSON.stringify({ clientInfo: { ...clientInfo, refs: refs.map(r => r.value) }, input }),
       });
       if (!res.ok) {
         const data = await res.json();
@@ -101,17 +102,20 @@ export default function Home() {
     }
   };
 
-  const lineItems: { label: string; amount: number }[] = [];
-  if (result.shootingFee > 0) lineItems.push({
-    label: `${SHOOTING_LABELS[input.shootingType]} 촬영 (${input.shootingHours === '4h' ? '4시간 이하' : '8시간'}${input.aerial ? ', 항공' : ''}) × ${input.shootingCount}회`,
-    amount: result.shootingFee,
-  });
-  if (result.compositionFee > 0) lineItems.push({ label: `구성 (${input.compositionMinutes}분)`, amount: result.compositionFee });
-  if (!result.isTravelNegotiable && result.travelFee > 0) lineItems.push({ label: `출장비 (${TRAVEL_LABELS[input.travelLocation]})`, amount: result.travelFee });
-  if (result.editingFee > 0) lineItems.push({ label: `편집 (${input.editMinutes}분${input.entertainmentEffect ? ', 예능형효과' : ''})`, amount: result.editingFee });
-  if (result.shortsEditingFee > 0) lineItems.push({ label: `쇼츠 편집 (${input.shortsMinutes}분${input.shortsEntertainmentEffect ? ', 예능형효과' : ''})`, amount: result.shortsEditingFee });
-  if (result.introOutroFee > 0) lineItems.push({ label: INTRO_OUTRO_LABELS[input.introOutro], amount: result.introOutroFee });
-  if (result.aiVideoFee > 0) lineItems.push({ label: `AI 동영상 제작 (${input.aiVideoMinutes}분)`, amount: result.aiVideoFee });
+  const lineItems = useMemo(() => {
+    const items: { label: string; amount: number }[] = [];
+    if (result.shootingFee > 0) items.push({
+      label: `${SHOOTING_LABELS[input.shootingType]} 촬영 (${input.shootingHours === '4h' ? '4시간 이하' : '8시간'}${input.aerial ? ', 항공' : ''}) × ${input.shootingCount}회`,
+      amount: result.shootingFee,
+    });
+    if (result.compositionFee > 0) items.push({ label: `구성 (${input.compositionMinutes}분)`, amount: result.compositionFee });
+    if (!result.isTravelNegotiable && result.travelFee > 0) items.push({ label: `출장비 (${TRAVEL_LABELS[input.travelLocation]})`, amount: result.travelFee });
+    if (result.editingFee > 0) items.push({ label: `편집 (${input.editMinutes}분${input.entertainmentEffect ? ', 예능형효과' : ''})`, amount: result.editingFee });
+    if (result.shortsEditingFee > 0) items.push({ label: `쇼츠 편집 (${input.shortsMinutes}분${input.shortsEntertainmentEffect ? ', 예능형효과' : ''})`, amount: result.shortsEditingFee });
+    if (result.introOutroFee > 0) items.push({ label: INTRO_OUTRO_LABELS[input.introOutro], amount: result.introOutroFee });
+    if (result.aiVideoFee > 0) items.push({ label: `AI 동영상 제작 (${input.aiVideoMinutes}분)`, amount: result.aiVideoFee });
+    return items;
+  }, [result, input]);
 
   return (
     <main className="min-h-screen bg-white">
@@ -129,6 +133,7 @@ export default function Home() {
       {step === 1 && (
         <Step1
           clientInfo={clientInfo}
+          refs={refs}
           setClient={setClient}
           setRef={setRef}
           addRef={addRef}
@@ -149,10 +154,10 @@ export default function Home() {
           sending={sending}
           sent={sent}
           error={error}
+          step1Valid={step1Valid}
           onBack={() => setStep(1)}
           onSubmit={handleSubmit}
           onSave={handleSave}
-          formatQuoteDate={formatQuoteDate}
         />
       )}
     </main>
@@ -160,9 +165,10 @@ export default function Home() {
 }
 
 function Step1({
-  clientInfo, setClient, setRef, addRef, removeRef, onNext, valid,
+  clientInfo, refs, setClient, setRef, addRef, removeRef, onNext, valid,
 }: {
-  clientInfo: ClientInfo;
+  clientInfo: Omit<ClientInfo, 'refs'>;
+  refs: { id: number; value: string }[];
   setClient: (f: keyof Omit<ClientInfo, 'refs'>, v: string) => void;
   setRef: (i: number, v: string) => void;
   addRef: () => void;
@@ -222,16 +228,16 @@ function Step1({
 
       <Field label="레퍼런스 링크">
         <div className="space-y-2">
-          {clientInfo.refs.map((r, i) => (
-            <div key={i} className="flex gap-2">
+          {refs.map((r, i) => (
+            <div key={r.id} className="flex gap-2">
               <input
                 className={`${inputClass} flex-1`}
-                value={r}
+                value={r.value}
                 onChange={e => setRef(i, e.target.value)}
                 placeholder="https://youtube.com/..."
                 type="url"
               />
-              {clientInfo.refs.length > 1 && (
+              {refs.length > 1 && (
                 <button type="button" onClick={() => removeRef(i)} className="text-gray-400 hover:text-black text-sm px-2 transition-colors">✕</button>
               )}
             </div>
@@ -253,21 +259,21 @@ function Step1({
 
 function Step2({
   input, setQ, result, clientInfo, lineItems, quoteRef,
-  sending, sent, error, onBack, onSubmit, onSave, formatQuoteDate,
+  sending, sent, error, step1Valid, onBack, onSubmit, onSave,
 }: {
   input: QuoteInput;
   setQ: (u: Partial<QuoteInput>) => void;
   result: QuoteResult;
-  clientInfo: ClientInfo;
+  clientInfo: Omit<ClientInfo, 'refs'>;
   lineItems: { label: string; amount: number }[];
   quoteRef: React.RefObject<HTMLDivElement | null>;
   sending: boolean;
   sent: boolean;
   error: string;
+  step1Valid: boolean;
   onBack: () => void;
   onSubmit: () => void;
   onSave: () => void;
-  formatQuoteDate: (d: string) => string;
 }) {
   return (
     <div className="max-w-5xl mx-auto px-6 py-10 grid grid-cols-1 md:grid-cols-2 gap-10">
@@ -347,7 +353,9 @@ function Step2({
             {(['none', 'free', 'premium'] as IntroOutroType[]).map(t => (
               <button key={t} type="button" onClick={() => setQ({ introOutro: t })}
                 className={`flex-1 py-2 border text-xs leading-tight transition-colors ${input.introOutro === t ? 'border-black bg-black text-white' : 'border-gray-300 hover:border-black'}`}>
-                {t === 'none' ? '없음' : t === 'free' ? '무료\n+10만' : '고급\n+10만'}
+                {t === 'none' ? '없음' : (
+                  <span className="whitespace-pre-line">{t === 'free' ? '무료\n+10만' : '고급\n+10만'}</span>
+                )}
               </button>
             ))}
           </div>
@@ -471,7 +479,7 @@ function Step2({
           <button onClick={onBack} className="py-3 px-5 border border-gray-300 text-sm hover:border-black transition-colors">
             ← 이전
           </button>
-          <button onClick={onSubmit} disabled={sending}
+          <button onClick={onSubmit} disabled={sending || !step1Valid}
             className="flex-1 py-3 bg-black text-white text-sm tracking-widest hover:bg-gray-800 transition-colors disabled:opacity-40 disabled:cursor-not-allowed">
             {sending ? '전송 중...' : '견적 요청'}
           </button>
