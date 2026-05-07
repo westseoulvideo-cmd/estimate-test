@@ -22,7 +22,7 @@ const TRAVEL: Record<TravelLocation, number | null> = {
 
 const EDITING  = { normal: 100000, entertainment: 120000 } as const;
 const SHORTS   = { normal:  50000, entertainment:  60000 } as const;
-const INTRO_OUTRO: Record<IntroOutroType, number> = { none: 0, free: 100000, premium: 100000 };
+const INTRO_OUTRO = { none: 0, free: 100000, premium: 100000 } as const;
 
 export const PRICES = {
   shooting:           SHOOTING_BASE,
@@ -58,14 +58,14 @@ export const INTRO_OUTRO_LABELS: Record<IntroOutroType, string> = {
 
 export function calculateQuote(input: QuoteInput): QuoteResult {
   const baseUnit = SHOOTING_BASE[input.shootingType][input.shootingHours];
-  const shootingUnit = input.aerial ? Math.round(baseUnit * 1.2) : baseUnit;
+  const shootingUnit = input.aerial ? Math.round(baseUnit * PRICES.aerialRatio) : baseUnit;
   const shootingFee = shootingUnit * input.shootingCount;
 
-  const compositionFee = input.compositionMinutes * 100000;
+  const compositionFee = input.compositionMinutes * PRICES.compositionPerMin;
 
   const travelBase = TRAVEL[input.travelLocation];
   const isTravelNegotiable = travelBase === null;
-  const travelFee = isTravelNegotiable ? 0 : (travelBase as number);
+  const travelFee = travelBase ?? 0;
 
   const editingFee = input.editMinutes *
     (input.entertainmentEffect ? EDITING.entertainment : EDITING.normal);
@@ -75,13 +75,13 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
 
   const introOutroFee = INTRO_OUTRO[input.introOutro];
 
-  const aiVideoFee = input.aiVideoMinutes * 100000;
+  const aiVideoFee = input.aiVideoMinutes * PRICES.aiVideoPerMin;
 
   const subtotalPerEpisode = shootingFee + compositionFee + travelFee +
     editingFee + shortsEditingFee + introOutroFee + aiVideoFee;
 
   const subtotal = subtotalPerEpisode * input.episodeCount;
-  const discount = input.additionalWork ? Math.round(subtotal * 0.05) : 0;
+  const discount = input.additionalWork ? Math.round(subtotal * PRICES.additionalDiscount) : 0;
   const total = subtotal - discount;
 
   return {
