@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem \"C:\\\\MARIE\\\\src\" -Recurse -Filter \"*.tsx\")",
+      "Bash(Select-Object FullName)",
+      "Bash(git *)",
+      "Bash(npm list *)",
+      "Bash(npm view *)",
+      "Bash(npm test *)",
+      "Bash(Select-String \"tests\")",
+      "Bash(npm run *)",
+      "Bash(npx tsc *)",
+      "Bash(cat)",
+      "Bash(rm test_immutability.ts)",
+      "Read(//tmp/**)",
+      "Bash(Get-ChildItem *)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "PowerShell(head *)",
+      "PowerShell(New-Item *)",
+      "Bash(xargs grep *)",
+      "Bash(node -e ' *)",
+      "Bash(Select-String \"next-env\")",
+      "Bash(echo \"exit: $?\")",
+      "Bash(npx jest *)",
+      "Bash(npm install *)",
+      "PowerShell(Test-Path \"C:\\\\estimate system\\\\public\\\\logo-white.png\" | ForEach-Object { if \\($_\\) { Write-Output \"File exists: C:\\\\estimate system\\\\public\\\\logo-white.png\" } else { Write-Output \"File not found\" } })"
+    ]
+  }
+}
