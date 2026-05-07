@@ -6,13 +6,14 @@ const base: QuoteInput = {
   shootingHours: '8h',
   aerial: false,
   shootingCount: 1,
+  shootingPersonCount: 1,
   compositionMinutes: 0,
   travelLocation: 'seoul',
   editMinutes: 0,
   entertainmentEffect: false,
-  shortsMinutes: 0,
+  shortsEpisodes: 0,
   shortsEntertainmentEffect: false,
-  introOutro: 'none',
+  introOutro: 'basic',
   aiVideoMinutes: 0,
   episodeCount: 1,
   additionalWork: false,
@@ -40,10 +41,10 @@ describe('PRICES 상수', () => {
   test('해외 출장비 null', () => {
     expect(PRICES.travel.overseas).toBeNull();
   });
-  test('쇼츠 일반 분당 50,000원', () => {
+  test('쇼츠 일반 50,000원/편', () => {
     expect(PRICES.shorts.normal).toBe(50000);
   });
-  test('쇼츠 예능형효과 분당 60,000원', () => {
+  test('쇼츠 예능형 편집 60,000원/편', () => {
     expect(PRICES.shorts.entertainment).toBe(60000);
   });
 });
@@ -73,16 +74,16 @@ describe('calculateQuote - 편집/쇼츠', () => {
     const r = calculateQuote({ ...base, editMinutes: 3 });
     expect(r.editingFee).toBe(300000);
   });
-  test('편집 예능형효과 3분 = 360,000', () => {
+  test('편집 예능형 편집 3분 = 360,000', () => {
     const r = calculateQuote({ ...base, editMinutes: 3, entertainmentEffect: true });
     expect(r.editingFee).toBe(360000);
   });
-  test('쇼츠 일반 2분 = 100,000', () => {
-    const r = calculateQuote({ ...base, shortsMinutes: 2 });
+  test('쇼츠 일반 2편 = 100,000', () => {
+    const r = calculateQuote({ ...base, shortsEpisodes: 2 });
     expect(r.shortsEditingFee).toBe(100000);
   });
-  test('쇼츠 예능형효과 2분 = 120,000', () => {
-    const r = calculateQuote({ ...base, shortsMinutes: 2, shortsEntertainmentEffect: true });
+  test('쇼츠 예능형 편집 2편 = 120,000', () => {
+    const r = calculateQuote({ ...base, shortsEpisodes: 2, shortsEntertainmentEffect: true });
     expect(r.shortsEditingFee).toBe(120000);
   });
 });
@@ -97,9 +98,9 @@ describe('calculateQuote - 출장/인트로/AI', () => {
     const r = calculateQuote({ ...base, travelLocation: 'jeju' });
     expect(r.travelFee).toBe(200000);
   });
-  test('무료 인트로/아웃트로 = 100,000', () => {
-    const r = calculateQuote({ ...base, introOutro: 'free' });
-    expect(r.introOutroFee).toBe(100000);
+  test('기본효과 인트로/아웃트로 = 0', () => {
+    const r = calculateQuote({ ...base, introOutro: 'basic' });
+    expect(r.introOutroFee).toBe(0);
   });
   test('고급 인트로/아웃트로 = 100,000', () => {
     const r = calculateQuote({ ...base, introOutro: 'premium' });

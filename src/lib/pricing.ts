@@ -14,15 +14,19 @@ const SHOOTING_BASE: Record<ShootingType, Record<ShootingHours, number>> = {
 
 const TRAVEL: Record<TravelLocation, number | null> = {
   seoul:       0,
+  incheon:     0,
+  gyeonggi:    0,
   chungcheong: 50000,
+  gangwon:     50000,
   jeonla:      100000,
+  gyeongsang:  100000,
   jeju:        200000,
   overseas:    null,
 };
 
-const EDITING  = { normal: 100000, entertainment: 120000 } as const;
-const SHORTS   = { normal:  50000, entertainment:  60000 } as const;
-const INTRO_OUTRO = { none: 0, free: 100000, premium: 100000 } as const;
+const EDITING    = { normal: 100000, entertainment: 120000 } as const;
+const SHORTS     = { normal:  50000, entertainment:  60000 } as const;
+const INTRO_OUTRO = { basic: 0, premium: 100000 } as const;
 
 export const PRICES = {
   shooting:           SHOOTING_BASE,
@@ -43,16 +47,19 @@ export const SHOOTING_LABELS: Record<ShootingType, string> = {
 };
 
 export const TRAVEL_LABELS: Record<TravelLocation, string> = {
-  seoul:       '서울·인천·경기',
-  chungcheong: '충청·강원',
-  jeonla:      '전라·경상',
+  seoul:       '서울',
+  incheon:     '인천',
+  gyeonggi:    '경기',
+  chungcheong: '충청',
+  gangwon:     '강원',
+  jeonla:      '전라',
+  gyeongsang:  '경상',
   jeju:        '제주',
   overseas:    '해외',
 };
 
 export const INTRO_OUTRO_LABELS: Record<IntroOutroType, string> = {
-  none:    '없음',
-  free:    '무료 인트로/아웃트로',
+  basic:   '기본효과 인트로/아웃트로',
   premium: '고급 인트로/아웃트로',
 };
 
@@ -70,7 +77,7 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
   const editingFee = input.editMinutes *
     (input.entertainmentEffect ? EDITING.entertainment : EDITING.normal);
 
-  const shortsEditingFee = input.shortsMinutes *
+  const shortsEditingFee = input.shortsEpisodes *
     (input.shortsEntertainmentEffect ? SHORTS.entertainment : SHORTS.normal);
 
   const introOutroFee = INTRO_OUTRO[input.introOutro];

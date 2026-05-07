@@ -1,7 +1,11 @@
 export type ShootingType = 'photo' | 'video' | 'photo+video';
 export type ShootingHours = '4h' | '8h';
-export type TravelLocation = 'seoul' | 'chungcheong' | 'jeonla' | 'jeju' | 'overseas';
-export type IntroOutroType = 'none' | 'free' | 'premium';
+export type TravelLocation =
+  | 'seoul' | 'incheon' | 'gyeonggi'
+  | 'chungcheong' | 'gangwon'
+  | 'jeonla' | 'gyeongsang'
+  | 'jeju' | 'overseas';
+export type IntroOutroType = 'basic' | 'premium';
 
 export interface ClientInfo {
   name: string;
@@ -22,11 +26,12 @@ export interface QuoteInput {
   shootingHours: ShootingHours;
   aerial: boolean;
   shootingCount: number;
+  shootingPersonCount: number;
   compositionMinutes: number;
   travelLocation: TravelLocation;
   editMinutes: number;
   entertainmentEffect: boolean;
-  shortsMinutes: number;
+  shortsEpisodes: number;
   shortsEntertainmentEffect: boolean;
   introOutro: IntroOutroType;
   aiVideoMinutes: number;

@@ -21,6 +21,8 @@ function escapeHtml(text: string): string {
     .replace(/'/g, '&#39;');
 }
 
+const VALID_INTRO_OUTRO = ['basic', 'premium'] as const;
+
 export async function POST(req: NextRequest) {
   let body: QuoteRequest;
   try {
@@ -38,18 +40,23 @@ export async function POST(req: NextRequest) {
   }
 
   const {
-    shootingCount, compositionMinutes, editMinutes,
-    shortsMinutes, aiVideoMinutes, episodeCount,
+    shootingCount, shootingPersonCount, compositionMinutes, editMinutes,
+    shortsEpisodes, aiVideoMinutes, episodeCount,
   } = input ?? {};
 
   if (
     !Number.isFinite(shootingCount) || shootingCount < 0 ||
+    !Number.isFinite(shootingPersonCount) || shootingPersonCount < 1 ||
     !Number.isFinite(compositionMinutes) || compositionMinutes < 0 ||
     !Number.isFinite(editMinutes) || editMinutes < 0 ||
-    !Number.isFinite(shortsMinutes) || shortsMinutes < 0 ||
+    !Number.isFinite(shortsEpisodes) || shortsEpisodes < 0 ||
     !Number.isFinite(aiVideoMinutes) || aiVideoMinutes < 0 ||
     !Number.isFinite(episodeCount) || episodeCount < 1
   ) {
+    return NextResponse.json({ error: '입력값이 올바르지 않습니다' }, { status: 400 });
+  }
+
+  if (!VALID_INTRO_OUTRO.includes(input.introOutro as typeof VALID_INTRO_OUTRO[number])) {
     return NextResponse.json({ error: '입력값이 올바르지 않습니다' }, { status: 400 });
   }
 
@@ -64,13 +71,13 @@ export async function POST(req: NextRequest) {
 
   const lineItems: { label: string; amount: number }[] = [];
   if (result.shootingFee > 0) lineItems.push({
-    label: `${SHOOTING_LABELS[input.shootingType]} 촬영 (${input.shootingHours === '4h' ? '4시간 이하' : '8시간'}${input.aerial ? ', 항공' : ''}) × ${input.shootingCount}회`,
+    label: `${SHOOTING_LABELS[input.shootingType]} 촬영 (${input.shootingHours === '4h' ? '4시간 이하' : '8시간'}${input.aerial ? ', 항공' : ''}, ${input.shootingPersonCount}인) × ${input.shootingCount}회`,
     amount: result.shootingFee,
   });
-  if (result.compositionFee > 0) lineItems.push({ label: `구성 (${input.compositionMinutes}분)`, amount: result.compositionFee });
+  if (result.compositionFee > 0) lineItems.push({ label: `기획서 제작 (${input.compositionMinutes}분)`, amount: result.compositionFee });
   if (!result.isTravelNegotiable && result.travelFee > 0) lineItems.push({ label: `출장비 (${TRAVEL_LABELS[input.travelLocation]})`, amount: result.travelFee });
-  if (result.editingFee > 0) lineItems.push({ label: `편집 (${input.editMinutes}분${input.entertainmentEffect ? ', 예능형효과' : ''})`, amount: result.editingFee });
-  if (result.shortsEditingFee > 0) lineItems.push({ label: `쇼츠 편집 (${input.shortsMinutes}분${input.shortsEntertainmentEffect ? ', 예능형효과' : ''})`, amount: result.shortsEditingFee });
+  if (result.editingFee > 0) lineItems.push({ label: `편집 분량 (${input.editMinutes}분${input.entertainmentEffect ? ', 예능형 편집' : ''})`, amount: result.editingFee });
+  if (result.shortsEditingFee > 0) lineItems.push({ label: `쇼츠 편집 (${input.shortsEpisodes}편${input.shortsEntertainmentEffect ? ', 예능형 편집' : ''})`, amount: result.shortsEditingFee });
   if (result.introOutroFee > 0) lineItems.push({ label: INTRO_OUTRO_LABELS[input.introOutro], amount: result.introOutroFee });
   if (result.aiVideoFee > 0) lineItems.push({ label: `AI 동영상 제작 (${input.aiVideoMinutes}분)`, amount: result.aiVideoFee });
 
@@ -105,6 +112,7 @@ export async function POST(req: NextRequest) {
     ['사업명', clientInfo.projectName],
     ['일시', clientInfo.projectDate],
     ['장소', clientInfo.projectLocation],
+    ['견적일', clientInfo.quoteDate],
   ].filter(([, v]) => v).map(([label, value]) =>
     `<tr><td style="padding:2px 8px;color:#666;width:60px">${escapeHtml(label)}</td><td style="padding:2px 8px">${escapeHtml(value)}</td></tr>`
   ).join('');
